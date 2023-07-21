@@ -1,30 +1,58 @@
-import { Fragment } from "react";
+import { Fragment, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Route } from "react-router-dom/cjs/react-router-dom.min";
+import { Link, Route, useRouteMatch } from "react-router-dom/cjs/react-router-dom.min";
 import Comments from "../component/commnets/Comments";
 import HighlightedQuote from "../component/quotes/HighLightedQuote";
+import useHttp from "../hooks/use-http";
+import { getSingleQuote } from "../lib/api";
+import LoadingSpinner from "../component/UI/LoadingSpinner";
 
 
-const Dummy_Quotes = [
-    {id:'q1', author : 'Max', text: 'Learning React is fun!'},
-    {id:'q2', author: 'Maximilian', text:'Learning React is Great!'},
-];
+// const Dummy_Quotes = [
+//     {id:'q1', author : 'Max', text: 'Learning React is fun!'},
+//     {id:'q2', author: 'Maximilian', text:'Learning React is Great!'},
+// ];
 
 const QuoteDetail = () =>{
     const params = useParams();
+    const match = useRouteMatch();
 
-    const quote = Dummy_Quotes.find(quote => quote.id === params.quoteId)
+    const {quoteId} = params;
+    const {sendRequest, status, data: loadedQuote,error}= useHttp(getSingleQuote,true);
 
-    if(!quote){
+    
+    useEffect(()=>{
+        sendRequest(quoteId);
+    },[sendRequest, quoteId])
+
+
+    if(status === 'pending'){
+        return <div className="centered">
+            <LoadingSpinner/>
+        </div>
+    }
+
+    if(error){
+        return(
+            <p className="centered">{error}</p>
+        )
+    }
+
+    
+    if(!loadedQuote.text){
         return<p>No Quote found</p>
     }
 
     return(
         <Fragment>
-            <HighlightedQuote text={quote.text} author={quote.author} />
-            <h1>Quote Detail Page</h1>
-            <p>{params.quoteId}</p>
-            <Route path = {`/quotes/${params.quoteId}/comments`}>
+            <HighlightedQuote text={loadedQuote.text} author={loadedQuote.author} />
+            <Route path={match.path} exact>
+                <div className="centered">
+                    <Link className='btn--flat' to={`${match.url}/comments`}>Load Comments</Link>
+                </div>
+            </Route>
+           
+            <Route path = {`${match.path}/comments`}>
                 <Comments></Comments>
             </Route>
         </Fragment>
